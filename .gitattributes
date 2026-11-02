@@ -1,0 +1,9 @@
+# Check these text files out with LF on every platform, whatever core.autocrlf
+# says, so each has the same bytes on every machine. autonomous/.gitattributes and
+# Prettier expect LF too.
+*.md   text eol=lf
+*.mjs  text eol=lf
+*.js   text eol=lf
+*.json text eol=lf
+*.sh   text eol=lf
+*.yml  text eol=lf

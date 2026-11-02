@@ -1,0 +1,15 @@
+#!/bin/sh
+
+repo_root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
+log_file="$repo_root/autosync.log"
+timestamp=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+
+if git push origin HEAD >>"$log_file" 2>&1; then
+    printf '[%s] Post-commit push completed.\n' "$timestamp" >>"$log_file"
+else
+    status=$?
+    printf '[%s] Post-commit push failed safely with status %s. No history was overwritten.\n' "$timestamp" "$status" >>"$log_file"
+    printf 'Global-instruction post-commit push failed; local commit is preserved. See %s\n' "$log_file" >&2
+fi
+
+exit 0

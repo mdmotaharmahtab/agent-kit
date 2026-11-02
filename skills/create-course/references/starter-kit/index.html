@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Example course</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="layout">
+  <nav class="sidebar" data-sidebar></nav>
+  <main class="content">
+    <!-- Replace every <angle> field and the example text with this course's own. Keep the ids. -->
+
+    <p class="muted">A self-paced course</p>
+    <h1>Example course</h1>
+    <p class="lead">&lt;One or two sentences: what the learner will be able to do at the end, and who the course is for.&gt;</p>
+    <div class="meta">
+      <span>3 modules</span>
+      <span>~5 hours</span>
+      <span>3 module quizzes + 2 final exams</span>
+      <span>Works offline, no build step</span>
+    </div>
+
+    <h2 id="who">Who this is for</h2>
+    <p>&lt;The learner profile in plain words: what they already know well, what they have never learned, and the outcome they want.&gt;</p>
+
+    <h2 id="how">How the course works</h2>
+    <ul>
+      <li><strong>Go in order.</strong> Each module assumes the ones before it.</li>
+      <li><strong>Every module ends with a quiz.</strong> Eighteen scenario questions are drawn at random from a larger bank, so retakes differ. The pass mark is 72%, like a certification exam, and memorising definitions is not enough to pass.</li>
+      <li><strong>Read the explanation for every option</strong>, including the ones you got right. The wrong options are where the misconceptions live.</li>
+      <li><strong>"Explain it back" prompts</strong> appear before each quiz. Say the answer out loud or write it down before opening the model answer.</li>
+      <li><strong>Two final exams</strong> of 65 questions with a 130 minute timer mix every module. Take Final A after the last module, and Final B a week after passing A.</li>
+      <li><strong>The "Core path" switch</strong> at the top of each module hides the labs, the "explain it back" prompts, further reading and other deep-dive material when you are short on time.</li>
+      <li><strong>Progress is stored in this browser</strong> (localStorage). Nothing is sent anywhere. Use the Reset link in the sidebar to start over.</li>
+    </ul>
+
+    <h2 id="map">Course map</h2>
+    <div class="diagram">
+      <svg viewBox="0 0 760 200" role="img" aria-label="Course map: two layers, the first with module 01 and the inserted module 01b, the second with module 02">
+        <rect x="15" y="15" width="730" height="80" class="zone-fill"/><text x="30" y="36" class="lbl-title">Layer 1 · &lt;foundations&gt;</text>
+        <rect x="40" y="48" width="300" height="36" class="box-accent"/><text x="190" y="71" text-anchor="middle" class="lbl-b">01 First module title</text>
+        <rect x="380" y="48" width="340" height="36" class="box-accent"/><text x="550" y="71" text-anchor="middle" class="lbl-b">01b A module inserted later</text>
+        <rect x="15" y="110" width="730" height="80" class="zone-fill"/><text x="30" y="131" class="lbl-title">Layer 2 · &lt;applying it&gt;</text>
+        <rect x="40" y="143" width="300" height="36" class="box-ok"/><text x="190" y="166" text-anchor="middle" class="lbl-b">02 Second module title</text>
+      </svg>
+    </div>
+    <p class="caption">Read top to bottom: each layer builds on the one above it.</p>
+
+    <h2 id="modules">Modules</h2>
+    <div class="module-grid" data-module-cards></div>
+
+    <h2 id="exams">Final exams</h2>
+    <p>Each final has 65 scenario questions across all modules with a 130 minute timer and the same 72% pass mark. Most questions touch two or three modules at once. A per-domain breakdown at the end tells you what to revisit.</p>
+    <div class="module-grid">
+      <a class="module-card" href="exams/final-a.html"><div class="n">Final exam A</div><h3>65 questions · 130 minutes</h3><p>Take after completing the last module.</p></a>
+      <a class="module-card" href="exams/final-b.html"><div class="n">Final exam B</div><h3>65 questions · 130 minutes</h3><p>A second, different set. Take a week after passing A.</p></a>
+      <a class="module-card" href="exams/practice-mix.html"><div class="n">Practice mix</div><h3>40 random questions from all module banks</h3><p>Untimed by default. Good for spaced repetition once you have finished several modules.</p></a>
+    </div>
+
+    <h2 id="conventions">Conventions used throughout</h2>
+    <ul>
+      <li><span class="badge">Scenario</span> callouts and cards are drawn from real incident patterns, with made-up names.</li>
+      <li>&lt;The figures' colour language, for example: blue boxes are control points, green are protected resources, red are failures.&gt;</li>
+      <li>Where a concept has different names across vendors, a small table gives all of them.</li>
+    </ul>
+
+    <div class="callout note">
+      <span class="title">A note on accuracy</span>
+      <p>Product names and console layouts change; principles do not. Where the course names a specific setting or endpoint, check it against current documentation before using it in production.</p>
+    </div>
+
+    <p class="muted" style="margin-top:40px">Start with <a href="modules/01-first-module.html">Module 01: First module title</a>.</p>
+  </main>
+</div>
+<script src="assets/app.js"></script>
+</body>
+</html>

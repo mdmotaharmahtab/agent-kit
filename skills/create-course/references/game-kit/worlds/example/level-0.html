@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MCP auth game, Level 0: Meet the map</title>
+<link rel="stylesheet" href="../../assets/game.css">
+</head>
+<body>
+<header class="top">
+  <div>
+    <div class="level" id="lvlLabel"></div>
+    <h1 id="lvlTitle"></h1>
+  </div>
+  <div class="progress" id="progress" aria-label="Progress"></div>
+  <div class="unlocked" id="unlockedCount"></div>
+</header>
+
+<main>
+  <section class="stage" aria-label="The map">
+    <div class="phase" id="phase"></div>
+    <svg class="map" viewBox="0 0 640 300" role="img" aria-label="The map: Anika and Claude inside Northwind, Atlas MCP inside Helix, a request arrow from Claude to Atlas and a response arrow back">
+      <defs>
+        <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/></marker>
+        <marker id="ahm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--border)"/></marker>
+      </defs>
+      <rect class="zone" x="10" y="30" width="350" height="250" rx="12"/>
+      <text class="zone-label" x="26" y="52">NORTHWIND (a logistics company)</text>
+      <rect class="zone" x="400" y="30" width="230" height="250" rx="12"/>
+      <text class="zone-label" x="416" y="52">HELIX (the vendor)</text>
+
+      <g class="node" id="n-anika" data-meet="anika">
+        <rect x="30" y="110" width="130" height="70" rx="10"/>
+        <text x="95" y="140" text-anchor="middle">Anika</text>
+        <text class="sub" x="95" y="160" text-anchor="middle">the user</text>
+      </g>
+      <g class="node" id="n-claude" data-meet="claude">
+        <rect x="200" y="110" width="140" height="70" rx="10"/>
+        <text x="270" y="140" text-anchor="middle">Claude</text>
+        <text class="sub" x="270" y="160" text-anchor="middle">the MCP host</text>
+      </g>
+      <g class="node" id="n-atlas" data-meet="atlas">
+        <rect x="440" y="100" width="160" height="90" rx="10"/>
+        <text x="520" y="135" text-anchor="middle">Atlas MCP</text>
+        <text class="sub" x="520" y="155" text-anchor="middle">the MCP server</text>
+        <text class="sub" x="520" y="172" text-anchor="middle">tool: shipment_summary</text>
+      </g>
+
+      <path class="wire" id="w-ask" d="M160,145 L198,145" marker-end="url(#ahm)"/>
+      <text class="wire-label" x="179" y="132" text-anchor="middle">asks</text>
+      <path class="wire" id="w-req" d="M340,128 L438,128" marker-end="url(#ahm)"/>
+      <text class="wire-label" x="390" y="118" text-anchor="middle">request</text>
+      <path class="wire" id="w-res" d="M438,165 L342,165" marker-end="url(#ahm)"/>
+      <text class="wire-label" x="390" y="182" text-anchor="middle">response</text>
+
+      <g class="extra" id="x-cred">
+        <rect x="350" y="200" width="82" height="24" rx="12" fill="var(--warn-soft)" stroke="var(--warn)"/>
+        <text x="391" y="216" text-anchor="middle" font-size="11">credential</text>
+        <path d="M391,200 L391,132" stroke="var(--warn)" stroke-width="1.5" stroke-dasharray="3 3"/>
+      </g>
+      <g class="extra" id="x-gate">
+        <rect x="440" y="205" width="160" height="56" rx="8" fill="var(--teal-soft)" stroke="var(--teal)"/>
+        <text x="520" y="227" text-anchor="middle" font-size="12">1. Who is calling?</text>
+        <text x="520" y="247" text-anchor="middle" font-size="12">2. What may they do?</text>
+      </g>
+      <circle class="packet" id="packet" r="6" cx="-20" cy="-20"/>
+    </svg>
+    <div class="legend">Dashed and grey: not discovered yet. Blue: unlocked. Purple outline: where you are now.</div>
+  </section>
+
+  <section class="panel" id="panel" aria-live="polite"></section>
+</main>
+<div class="toast" id="toast"></div>
+
+<script src="../../assets/worlds.js"></script>
+<script src="world.js"></script>
+<script src="../../assets/game.js"></script>
+<script>
+(function () {
+"use strict";
+const { $, light, unlock } = GAME, focusNode = GAME.focus, sendPacket = GAME.packet;
+
+// ---------- the stops ----------
+const stops = [
+{
+  phase: "briefing",
+  html: `
+  <div class="kicker">Mission briefing</div>
+  <h2>A question Claude cannot answer alone</h2>
+  <div class="box mission"><span class="tag">The situation</span>
+  You are <b>Priya</b>, tech lead at <b>Helix</b>, a small software company. Helix built <b>Atlas</b>, a
+  shipment-tracking data product, for <b>Northwind Freight</b>, a logistics company: it records every shipment
+  Northwind carries for its customers.</div>
+  <p>Monday, 9:12. <b>Anika</b>, an account manager at Northwind, types into Claude, the AI assistant on her laptop:</p>
+  <p style="font-size:18px; margin-left:12px;"><i>"How many shipments did customer AC-0417 book this week?"</i></p>
+  <p>Claude does not know. The numbers live in Atlas, at Helix. So Helix gave Atlas an <b>MCP server</b>, a door that AI
+  apps like Claude can call. (MCP, the Model Context Protocol, is a standard way for an AI app to call tools that other
+  systems offer.)</p>
+  <div class="box why"><span class="tag">Why this level matters</span>
+  Shipment data is commercially sensitive. Anika may see AC-0417, a customer account she manages, but not every
+  customer, and nobody outside Northwind may see any of it.
+  Before Atlas answers, it must know <b>who is asking</b>. Every level of this game is a different way to give Atlas that
+  knowledge. This level shows the ground they all stand on.</div>
+  <p><b>Your mission:</b> follow Anika's question from Claude to Atlas and back, and find out what Atlas needs before it
+  may answer. The map on the left is the goal picture; it lights up as you go.</p>`,
+  ready: true,
+  enter() { focusNode(null); }
+},
+{
+  phase: "briefing",
+  html: `
+  <div class="kicker">Stop 1 of 4 &middot; The cast</div>
+  <h2>Who is who</h2>
+  <p>Every auth question has the same shape: <b>who is asking whom, for what</b>. So first, meet the three parties.
+  <b>Click each box on the map.</b></p>
+  <div class="explain" id="meetText"><span class="hint">Click Anika, Claude and Atlas MCP on the map.</span></div>
+  <div class="challenge" id="ch1" style="display:none">
+    <h3>Challenge</h3>
+    <p>Anika may see customer AC-0417 but not AC-0999. <b>Who must enforce that rule?</b></p>
+    <div class="opts">
+      <button class="opt" data-ok="0" data-fb="Claude runs on Anika's laptop, and it is only one of many MCP hosts. Anyone can call Atlas's address with another host, or with a simple command-line tool, and skip any rule Claude enforces. A rule that lives only in the caller is a rule an attacker simply does not run.">Claude, because it sends the question</button>
+      <button class="opt" data-ok="1" data-fb="Right. Atlas holds the data, so Atlas is the only place a rule cannot be skipped. Whatever arrives at Atlas's door, from Claude or from anything else, meets the same check. That is why every level of this game ends at Atlas's door.">Atlas, because it holds the data</button>
+      <button class="opt" data-ok="0" data-fb="Anika is the one the rule is about. She might be honest, but the rule must hold even if someone else is pretending to be her, or if she asks for the wrong customer by mistake.">Anika, because she knows what she is allowed</button>
+    </div>
+    <div class="feedback" id="fb1"></div>
+  </div>`,
+  ready: false,
+  enter(api) {
+    focusNode(null);
+    const met = new Set();
+    const text = {
+      anika: "<b>Anika, the user.</b> A person at Northwind. She is the one Atlas must recognise, and her access depends on which customers she manages.",
+      claude: "<b>Claude, the MCP host.</b> The AI app that talks to MCP servers on the user's behalf. It reads Anika's question, sees that Atlas offers a matching tool, and calls it. Other hosts exist (code editors, agent platforms); Atlas cannot tell them apart by looking.",
+      atlas: "<b>Atlas MCP, the MCP server.</b> Helix's door into Atlas. It offers <b>tools</b>, functions an AI app may call, such as <code>shipment_summary(customer)</code>, which returns how many shipments a customer booked."
+    };
+    document.querySelectorAll(".node").forEach((n) => {
+      n.classList.add("clickable");
+      n.onclick = () => {
+        const k = n.dataset.meet; met.add(k); light([n.id]); focusNode(n.id);
+        $("#meetText").innerHTML = text[k] + `<div class="hint" style="margin-top:6px">${met.size} of 3 met.</div>`;
+        unlock({ anika: "user", claude: "MCP host", atlas: "MCP server and tool" }[k]);
+        if (met.size === 3) { light(["w-ask", "w-req", "w-res"]); $("#ch1").style.display = "block"; }
+      };
+    });
+    api.choice("#ch1", "#fb1", () => { unlock("the server enforces the rules"); });
+  },
+  leave() { document.querySelectorAll(".node").forEach((n) => { n.classList.remove("clickable"); n.onclick = null; }); }
+},
+{
+  phase: "request",
+  html: `
+  <div class="kicker">Stop 2 of 4 &middot; The request</div>
+  <h2>What actually travels</h2>
+  <p>Claude does not phone Atlas or show it Anika's face. It sends one <b>HTTP request</b>, a block of text over the
+  internet, and Atlas sees nothing else. <b>Click each underlined part.</b></p>
+  <pre class="req"><span class="part" data-k="line">POST /mcp HTTP/1.1</span>
+<span class="part" data-k="host">Host: mcp.atlas.example</span>
+<span class="part" data-k="ctype">Content-Type: application/json
+Accept: application/json, text/event-stream</span>
+<span class="part" data-k="mcp">MCP-Protocol-Version: 2026-07-28
+Mcp-Method: tools/call
+Mcp-Name: shipment_summary</span>
+
+<span class="part" data-k="body">{"jsonrpc": "2.0", "id": 7, "method": "tools/call",
+ "params": {"name": "shipment_summary",
+            "arguments": {"customer": "AC-0417"},</span>
+<span class="part" data-k="meta">            "_meta": {"io.modelcontextprotocol/clientInfo":
+                        {"name": "claude"}}}}</span></pre>
+  <div class="explain" id="reqText"><span class="hint">Click a part of the request.</span></div>
+  <div class="challenge" id="ch2">
+    <h3>Challenge</h3>
+    <p>Look at the whole request again. <b>What in it tells Atlas that this is Anika?</b></p>
+    <div class="opts">
+      <button class="opt" data-ok="0" data-fb='That is only a name Claude says about itself, and it names the app, not the person. Any program can write "claude" there. Atlas cannot believe a claim the caller makes about itself without proof.'>The <code>clientInfo</code> line that says "claude"</button>
+      <button class="opt" data-ok="0" data-fb="The request does not carry an IP address in its text. Atlas can see the network address the request came from, but at Northwind hundreds of people share a few office addresses, and from a café it is the café's. An address says roughly where, never who.">The internet address the request came from</button>
+      <button class="opt" data-ok="1" data-fb="Right. Nothing. Atlas sees a question about AC-0417 and no proof of who asked. Anyone who knows Atlas's address could send the very same text. Claude must add proof, and that proof is the next stop.">Nothing</button>
+    </div>
+    <div class="feedback" id="fb2"></div>
+  </div>
+  <details class="more"><summary>In real life: who writes this request</summary><div>
+  Nobody types it by hand. The host uses an MCP SDK (software development kit), such as the official Python or
+  TypeScript SDK from the MCP project, which builds the headers and the body from a tool call. As the person building
+  Atlas, you use the same SDK on the server side to read them. What the SDK does not decide for you is the subject of
+  this whole game: what Atlas accepts as proof of who is calling.</div></details>`,
+  ready: false,
+  enter(api) {
+    focusNode("n-claude");
+    sendPacket("w-req");
+    const text = {
+      line: "<b>The request line.</b> <code>POST</code> means \"here is something for you to act on\". <code>/mcp</code> is the path, the door inside Atlas that speaks MCP.",
+      host: "<b>Which server.</b> <code>mcp.atlas.example</code> is Atlas's internet name. Lines in the form <code>Name: value</code> are called <b>headers</b>: labels on the outside of the request, read before the contents.",
+      ctype: "<b>The format.</b> The contents are JSON (a common text format for data), and Claude can read a reply either as one JSON block or as a stream of events.",
+      mcp: "<b>MCP's own headers.</b> The version of MCP Claude speaks, and a copy of what the body asks for (call a tool, named <code>shipment_summary</code>). They let Atlas, or anything in front of it, route the request without opening the body.",
+      body: "<b>The body, the actual question.</b> \"Call the tool <code>shipment_summary</code> with the argument <code>customer = AC-0417</code>.\" The <code>id</code> (7) lets Claude match the reply to this question.",
+      meta: "<b>Extra information about the caller.</b> Claude names itself: <code>claude</code>. Keep an eye on this line for the challenge below."
+    };
+    document.querySelectorAll("pre.req .part").forEach((s) => {
+      s.onclick = () => {
+        document.querySelectorAll("pre.req .part").forEach((x) => x.classList.remove("sel"));
+        s.classList.add("sel", "seen"); $("#reqText").innerHTML = text[s.dataset.k];
+        if (s.dataset.k === "line" || s.dataset.k === "host") unlock("HTTP request and headers");
+      };
+    });
+    api.choice("#ch2", "#fb2", () => unlock("a request carries no identity by itself"));
+  }
+},
+{
+  phase: "request",
+  html: `
+  <div class="kicker">Stop 3 of 4 &middot; Proof</div>
+  <h2>Where the proof goes</h2>
+  <div class="box why"><span class="tag">Why</span>
+  The last stop ended with a request anyone could have sent. Atlas needs something in the request that only a
+  legitimate caller could have: a <b>credential</b>. Think of the badge you show at a building's front desk. The
+  levels of this game are different kinds of badge; for now, the badge is just a string of characters like
+  <code>atk_7QmZ…</code>.</div>
+  <div class="challenge" id="ch3">
+    <h3>Challenge</h3>
+    <p>Where in the request should Claude put the credential?</p>
+    <div class="opts">
+      <button class="opt" data-ok="0" data-fb='Addresses are written down everywhere: in proxy and server logs, in monitoring tools, in browser history. Every one of these copies now holds the badge:<pre class="req" style="font-size:12px">10.2.4.17 - [12/Oct 09:12:03] "POST /mcp?key=atk_7QmZ9xL2 HTTP/1.1" 200</pre>Whoever can read any log can now call Atlas as Northwind.'>In the address: <code>POST /mcp?key=atk_7QmZ…</code></button>
+      <button class="opt" data-ok="0" data-fb="The body is the MCP question itself. Atlas would have to read and parse the question before knowing whether to talk to the caller at all, and every tool would have to remember to look for it. MCP's sign-in rules also say where the credential goes: not here.">Inside the JSON body, next to the arguments</button>
+      <button class="opt" data-ok="1" data-fb="Right. HTTP has a standard header for exactly this. MCP's sign-in rules put tokens there on every request, and a fixed key usually goes there too. Atlas can check it before it reads the question, and request logs usually record the address, not the headers.">In a header: <code>Authorization: Bearer atk_7QmZ…</code></button>
+    </div>
+    <div class="feedback" id="fb3"></div>
+  </div>
+  <div id="howBox" style="display:none">
+  <div class="box how"><span class="tag">How</span>
+  The request now starts like this:
+  <pre class="req">POST /mcp HTTP/1.1
+Host: mcp.atlas.example
+<b style="color:#f6e05e">Authorization: Bearer atk_7QmZ…</b>
+MCP-Protocol-Version: 2026-07-28
+…</pre>
+  <code>Bearer</code> means "whoever bears (holds) this string may use it", like cash. That is convenient, and it is also
+  the danger: a copied credential works for the copier. Every later level is partly about what happens when one is copied.</div>
+  </div>`,
+  ready: false,
+  enter(api) {
+    focusNode("n-claude");
+    api.choice("#ch3", "#fb3", () => {
+      light(["x-cred"]); sendPacket("w-req", "var(--warn)"); $("#howBox").style.display = "block";
+      unlock("credential in the Authorization header");
+    });
+  }
+},
+{
+  phase: "response",
+  html: `
+  <div class="kicker">Stop 4 of 4 &middot; Atlas's two questions</div>
+  <h2>What Atlas does at the door</h2>
+  <p>The request arrives with a credential. Before running the tool, Atlas asks two questions, in this order:</p>
+  <ol>
+    <li><b>Who is calling?</b> Is the credential real, and whose is it? This is <b>authentication</b>. If the answer
+    is "I don't know", Atlas replies <b>401</b>.</li>
+    <li><b>What may they do?</b> Now that Atlas knows who it is: may they call this tool, for this customer? This is
+    <b>authorization</b>. If the answer is "no", Atlas replies <b>403</b>.</li>
+  </ol>
+  <p>Only if both answers are yes does it run the tool and reply <b>200</b> (OK), with the answer for Claude.</p>
+  <div class="challenge" id="ch4">
+    <h3>Challenge: what does Atlas reply?</h3>
+    <div id="sorts"></div>
+  </div>
+  <details class="more"><summary>Common misreading: "401 Unauthorized"</summary><div>
+  The official name of 401 is "Unauthorized", which sounds like question 2. It really means question 1 failed:
+  "I don't know who you are". 403 "Forbidden" is question 2: "I know who you are, and the answer is no". The names
+  are a historical accident; go by the two questions, not the names.</div></details>
+  <div id="resBox" style="display:none">
+  <div class="box how"><span class="tag">The response, on the way back</span>
+  <pre class="req">HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"jsonrpc": "2.0", "id": 7,
+ "result": {"resultType": "complete",
+            "content": [{"type": "text",
+              "text": "AC-0417: 23 shipments booked this week (412 this year)."}]}}</pre>
+  Same <code>id</code> (7) as the question, so Claude knows which question this answers. Claude turns it into a
+  sentence for Anika.</div></div>`,
+  ready: false,
+  enter(api) {
+    focusNode("n-atlas"); light(["x-gate"]);
+    const cards = [
+      { t: "A request with <b>no</b> <code>Authorization</code> header.", a: "401", fb: "No credential, so question 1 has no answer: 401." },
+      { t: "A credential Atlas never issued (someone typed a random string).", a: "401", fb: "The credential is not real, so Atlas still does not know who is calling: 401." },
+      { t: "Anika's real credential, asking for <b>AC-0417</b>, a customer she manages.", a: "200", fb: "Question 1: it is Anika. Question 2: she may see AC-0417. Both yes: 200, with the numbers." },
+      { t: "Anika's real credential, asking for <b>AC-0999</b>, a customer she does not manage.", a: "403", fb: "Question 1 is answered (it is Anika), question 2 is no: 403. This only works if the credential tells Atlas it is <b>Anika</b>, not just \"someone from Northwind\". Keep that in mind for Level 1." }
+    ];
+    let done = 0;
+    $("#sorts").innerHTML = cards.map((c, i) => `
+      <div class="sort-card" data-i="${i}"><div>${c.t}</div>
+      <div class="btns">${["401", "403", "200"].map((x) => `<button data-v="${x}">${x}</button>`).join("")}</div>
+      <div class="fb"></div></div>`).join("");
+    document.querySelectorAll(".sort-card").forEach((card) => {
+      const c = cards[+card.dataset.i]; let solved = false;
+      card.querySelectorAll("button").forEach((b) => b.onclick = () => {
+        if (solved) return;
+        const fb = card.querySelector(".fb"); fb.classList.add("show");
+        if (b.dataset.v === c.a) {
+          b.classList.add("right"); solved = true; fb.innerHTML = "&#10003; " + c.fb; done++;
+          sendPacket("w-res", c.a === "200" ? "var(--ok)" : "var(--bad)");
+          if (done === cards.length) {
+            $("#resBox").style.display = "block"; light(["w-res"]);
+            unlock("authentication (401) vs authorization (403)"); api.ready();
+          }
+        } else {
+          b.classList.add("wrong");
+          fb.innerHTML = b.dataset.v === "200" ? "Not quite: one of the two questions fails here. Which one?" :
+            b.dataset.v === "401" ? "Not quite: does Atlas know who is calling here? If it does, the problem is question 2." :
+            "Not quite: 403 means Atlas knows who it is. Does it, here?";
+        }
+      });
+    });
+  }
+},
+{
+  phase: "debrief",
+  html: `
+  <div class="kicker">Debrief</div>
+  <h2>Level 0 complete</h2>
+  <p>You followed Anika's question to Atlas and back. What you now know:</p>
+  <ol>
+    <li>Three parties: the <b>user</b> (Anika), the <b>MCP host</b> (Claude), the <b>MCP server</b> (Atlas), which offers <b>tools</b>.</li>
+    <li>The rules live at <b>Atlas</b>, because a rule in the caller can be skipped.</li>
+    <li>A request carries <b>no identity by itself</b>. Proof travels as a <b>credential</b> in the <code>Authorization</code> header.</li>
+    <li>Atlas asks <b>who is calling</b> (no answer: 401), then <b>what may they do</b> (no: 403).</li>
+  </ol>
+  <div id="chips"></div>
+  <h3 style="margin-top:22px">The scorecard</h3>
+  <p>Every level from here gives Atlas a different kind of credential. Each one is judged on the same questions,
+  and the table fills in as you play. By the end you can pick the right one for any customer.</p>
+  <div id="score"></div>
+  <div class="box mission"><span class="tag">Next: Level 1, the fixed key</span>
+  Helix's simplest answer: give Northwind one secret string and have Claude send it on every call. It takes five
+  minutes to set up. You will play it, then watch what happens when Ben, Anika's colleague, asks for AC-0417, when Anika
+  leaves Northwind, and when the key ends up in a chat message.</div>
+  `,
+  ready: true,
+  enter() {
+    focusNode(null);
+    GAME.chips("#chips"); GAME.scorecard("#score", 0);
+  }
+}
+];
+
+GAME.level({ level: 0, phases: ["briefing", "request", "response", "debrief"], stops });
+})();
+</script>
+</body>
+</html>

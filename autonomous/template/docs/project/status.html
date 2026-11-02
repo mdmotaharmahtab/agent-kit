@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="The single owner-readable {{PROJECT_NAME}} plan, progress, blockers, and next steps." />
+    <title>{{PROJECT_NAME}} status</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        line-height: 1.55;
+      }
+      body {
+        margin: 0 auto;
+        max-width: 54rem;
+        padding: 2rem 1.25rem 4rem;
+      }
+      h1 {
+        margin-bottom: 0.25rem;
+      }
+      .lede {
+        opacity: 0.8;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 1rem 0 2rem;
+        font-size: 0.95rem;
+      }
+      th,
+      td {
+        border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+        padding: 0.5rem 0.6rem;
+        text-align: left;
+        vertical-align: top;
+      }
+      code {
+        font-size: 0.9em;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>{{PROJECT_NAME}} status</h1>
+    <p class="lede">
+      The one page the owner reads. Written in plain language: what happened, what
+      it means, what changes, and where things stand. Replace everything below the
+      documentation map with the real story as soon as there is one.
+    </p>
+
+    <h2>Where things stand</h2>
+    <p>
+      The autonomous kit is installed. Nothing has been built yet. The current objective,
+      blockers, and next actions live in the coordinator checkpoint.
+    </p>
+
+    <h2>Documentation map</h2>
+    <p>
+      Every live document appears here with its purpose, who decides it, when it is
+      updated, and what checks it. A document with no live purpose is archived under
+      <code>docs/archive/</code> with a manifest entry, never deleted.
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th>Document</th>
+          <th>Purpose</th>
+          <th>Authority</th>
+          <th>Update trigger</th>
+          <th>Checker</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><a href="../../AGENTS.md">AGENTS.md</a></td>
+          <td>The rulebook that outlives any one milestone.</td>
+          <td>Owner, maintained by the support lane.</td>
+          <td>A rule changes.</td>
+          <td><code>node scripts/work.mjs check</code></td>
+        </tr>
+        <tr>
+          <td><a href="../../CLAUDE.md">CLAUDE.md</a></td>
+          <td>Claude Code specifics layered on the rulebook.</td>
+          <td>Owner, maintained by the support lane.</td>
+          <td>Seats, lanes, or commands change.</td>
+          <td><code>node scripts/work.mjs check</code></td>
+        </tr>
+        <tr>
+          <td><a href="architecture.html">architecture.html</a></td>
+          <td>How the system is put together and why.</td>
+          <td>Support lane.</td>
+          <td>A source in the architecture scope changes.</td>
+          <td><code>node scripts/documentation.mjs check</code></td>
+        </tr>{{DOCUMENT_ROWS}}
+      </tbody>
+    </table>
+
+    <h2>How to read this page</h2>
+    <p>
+      The first line of this file is a stamp recording exactly which sources the
+      page was written against. When one of them changes,
+      <code>node scripts/documentation.mjs check</code> reports the page as review
+      due. Update the prose, then run
+      <code>node scripts/documentation.mjs stamp status</code>.
+    </p>
+  </body>
+</html>

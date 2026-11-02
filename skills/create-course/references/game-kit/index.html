@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Example game: the world map</title>
+<link rel="stylesheet" href="assets/game.css">
+</head>
+<body>
+<div class="hub">
+  <!-- Replace the page title and the heading with the game's own. -->
+  <div class="kicker" style="color:var(--purple);font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase">The game</div>
+  <h1 style="margin:4px 0 6px">Example game</h1>
+  <p>Every world is one story with one question at its heart, played as a ladder of levels: each level is a real
+  way to answer the question, and each fixes the problem the one before it left. The <b>main quest</b> is short.
+  <b>Side quests</b> hold the depth; <b>bonus missions</b> let you practise the real task and take the exam.</p>
+  <div id="map"></div>
+  <p style="margin-top:20px"><button class="back" id="reset">Reset all progress</button></p>
+</div>
+<script src="assets/worlds.js"></script>
+<script src="assets/game.js"></script>
+<script>
+(function () {
+  "use strict";
+  GAME.worldMap("#map");
+  document.getElementById("reset").onclick = () => { GAME.state.worlds = {}; GAME.save(); location.reload(); };
+})();
+</script>
+</body>
+</html>

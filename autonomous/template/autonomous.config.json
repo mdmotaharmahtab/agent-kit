@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "autonomousVersion": 2,
+  "project": {
+    "name": "{{PROJECT_NAME}}",
+    "defaultBranch": "{{DEFAULT_BRANCH}}"
+  },
+  "tasks": {
+    "idPrefix": "{{TASK_PREFIX}}",
+    "idDigits": 3
+  },
+  "git": {
+    "commitEmail": "{{COMMIT_EMAIL}}",
+    "remoteHost": "github.com",
+    "remotePath": "{{REMOTE_PATH}}"
+  },
+  "lanes": {
+    "protectedPaths": [
+      "AGENTS.md",
+      "CLAUDE.md",
+      "autonomous.config.json",
+      "scripts/autonomous-config.mjs",
+      "scripts/work.mjs",
+      "scripts/live-state.mjs",
+      "scripts/lane-guard.mjs",
+      "scripts/documentation.mjs",
+      "scripts/verify.mjs",
+      "scripts/context-hook.mjs",
+      "scripts/context-hook.sh",
+      "scripts/context-hook.ps1",
+      ".claude/settings.json",
+      ".claude/hooks/hook-support.mjs",
+      ".claude/hooks/lane-guard-pretooluse.mjs",
+      ".claude/hooks/commit-identity-pretooluse.mjs",
+      ".claude/hooks/precompact-validate.mjs",
+      ".claude/hooks/sessionstart-compact-context.mjs",
+      ".claude/hooks/autosave-push-stop.mjs",
+      ".claude/agents/autonomous-router.md",
+      ".claude/agents/{{SUPPORT_AGENT}}.md",
+      ".claude/agents/autonomous-worker.md",
+      ".claude/agents/autonomous-explorer.md",
+      ".codex/hooks.json",
+      ".cursor/rules/agent-autonomous.mdc"
+    ],
+    "supportAgentTypes": ["{{SUPPORT_AGENT}}"],
+    "instructionFiles": ["AGENTS.md", "CLAUDE.md"],
+    "referenceFiles": [
+      "AGENTS.md",
+      "CLAUDE.md",
+      ".claude/agents/autonomous-router.md",
+      ".claude/agents/{{SUPPORT_AGENT}}.md",
+      ".claude/agents/autonomous-worker.md",
+      ".claude/agents/autonomous-explorer.md"
+    ],
+    "milestoneNeutralSection": "Big picture"
+  },
+  "documentation": {
+    "statusDocument": "docs/project/status.html",
+    "architectureDocument": "docs/project/architecture.html",
+    "stampMarker": "autonomous-doc-state",
+    "guidancePaths": ["AGENTS.md", "CLAUDE.md", "README.md"],
+    "architectureScopes": [
+      {
+        "id": "autonomous-control-plane",
+        "paths": [
+          "scripts/work.mjs",
+          "scripts/live-state.mjs",
+          "scripts/lane-guard.mjs",
+          "scripts/documentation.mjs",
+          "scripts/verify.mjs",
+          "scripts/context-hook.mjs"
+        ]
+      },
+      {
+        "id": "repository-boundary",
+        "paths": ["autonomous.config.json", "package.json", ".gitignore"]
+      }
+    ],
+    "changelogRequiredFrom": "1970-01-01",
+    "changelogPath": "CHANGELOG.md",
+    "documentMapExempt": ["docs/project/status.html", "CHANGELOG.md", "LICENSE", "README.md"],
+    "excludedSegments": [
+      "node_modules",
+      ".git",
+      ".venv",
+      ".tools",
+      ".local",
+      "archive",
+      "outputs",
+      "secrets",
+      "fixtures",
+      "work",
+      ".claude",
+      ".codex",
+      ".cursor",
+      ".github"
+    ]
+  },
+  "autosave": {
+    "enabled": false,
+    "branch": "{{DEFAULT_BRANCH}}",
+    "minIntervalMinutes": 10,
+    "visibilityCheck": "github",
+    "allowedPrefixes": ["src/", "tests/", "scripts/", "docs/", "work/", ".claude/"],
+    "allowedFiles": ["AGENTS.md", "CLAUDE.md", "README.md", "CHANGELOG.md"]
+  },
+  "quietHours": {
+    "timeZone": "UTC",
+    "startHour": 23,
+    "endHour": 8
+  },
+  "checkpoint": {
+    "maxBytesAboveLog": 16384,
+    "maxLinesAboveLog": 220,
+    "maxSectionsAboveLog": 10
+  }
+}

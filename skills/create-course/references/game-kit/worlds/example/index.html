@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MCP auth: world map</title>
+<link rel="stylesheet" href="../../assets/game.css">
+</head>
+<body>
+<div class="hub">
+  <p><a class="home" href="../../index.html">&larr; All worlds</a></p>
+  <div class="kicker" style="color:var(--purple);font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase" id="wk"></div>
+  <h1 style="margin:4px 0 6px" id="wt"></h1>
+  <p id="wb"></p>
+  <div id="hub"></div>
+  <p style="margin-top:20px"><button class="back" id="reset">Reset this world's progress</button></p>
+</div>
+<script src="../../assets/worlds.js"></script>
+<script src="world.js"></script>
+<script src="../../assets/game.js"></script>
+<script>
+(function () {
+  "use strict";
+  const W = GAME.WORLD, meta = (window.WORLDS || []).find((x) => x.id === W.id) || {};
+  document.title = W.title + ": world map";
+  document.getElementById("wk").textContent = "World " + (meta.n ?? "") ;
+  document.getElementById("wt").textContent = W.title;
+  document.getElementById("wb").innerHTML = W.blurb || "";
+  GAME.worldHub("#hub");
+  document.getElementById("reset").onclick = () => { delete GAME.state.worlds[W.id]; GAME.save(); location.reload(); };
+})();
+</script>
+</body>
+</html>

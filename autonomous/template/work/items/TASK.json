@@ -1,0 +1,20 @@
+{
+  "id": "{{FIRST_TASK_ID}}",
+  "title": "Set up {{PROJECT_NAME}} and prove the autonomous kit works end to end",
+  "kind": "chore",
+  "status": "in_progress",
+  "approved": true,
+  "owner": "router",
+  "dependsOn": [],
+  "acceptance": [
+    "`node scripts/work.mjs check` exits 0 on a clean working tree.",
+    "`node scripts/documentation.mjs check` reports both living documents as fresh.",
+    "The Big picture section of AGENTS.md describes this project rather than the placeholder.",
+    "A command receipt from `node scripts/verify.mjs` is recorded under work/runs/."
+  ],
+  "evidence": [],
+  "reviewRequired": false,
+  "reviewExemption": "Setup task: the acceptance checks are the proof, and no product behaviour changes.",
+  "blockers": [],
+  "nextAction": "Replace the placeholder text in AGENTS.md and the two living documents, then run the checks."
+}

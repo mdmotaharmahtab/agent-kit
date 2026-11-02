@@ -1,0 +1,8 @@
+backups/
+*.log
+.venv/
+.conda/
+.state/
+__pycache__/
+*.pyc
+dist/

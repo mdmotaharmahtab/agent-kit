@@ -1,0 +1,32 @@
+---
+description: Always-on project rules - read the rulebook and the live checkpoint before acting.
+alwaysApply: true
+---
+
+This repository runs the autonomous kit. Before editing anything:
+
+1. Read `AGENTS.md` - the rulebook that outlives any one milestone.
+2. Read `work/CHECKPOINT.md` down to its `## Log` heading - the primary
+   objective and the queue.
+3. Read `work/AGENT_CONTEXT.md` and `work/DECISIONS.md` - the lessons so far and
+   the owner's corrections.
+4. Read the canonical task under `work/items/` that the primary objective names.
+
+Read nothing else unless one of those points you there.
+
+Rules the checkers enforce, so following them saves a round trip:
+
+- Instructions, documentation, archives, validators, and hooks are a separate
+  lane. Do not edit the paths listed in `autonomous.config.json` under
+  `lanes.protectedPaths` while working on a product task.
+- Never delete a superseded document; archive it under `docs/archive/` with a
+  manifest entry, and give every live document a row in the documentation map.
+- Every accepted task gets a plain-language `CHANGELOG.md` entry naming its id.
+- Record decisions in `work/messages/`, status in `work/items/`, the current
+  outcome in `work/CHECKPOINT.md`, live ownership in the items' `owner` and
+  `ownedPaths`, the owner's corrections in `work/DECISIONS.md`. Chat history
+  and generated summaries are not authority.
+
+Run `node scripts/work.mjs check` before handing work back. Cursor has no
+lifecycle hook, so run `node scripts/context-hook.mjs render` yourself after a
+long gap to reload the recorded state.

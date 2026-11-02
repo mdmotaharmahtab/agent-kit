@@ -1,0 +1,16 @@
+node_modules/
+coverage/
+.eslintcache
+
+# autonomous kit: private runtime state
+.local/
+.tools/
+
+# Local environment and secrets never belong in the repository.
+.env
+.env.*
+/secrets/
+/outputs/
+
+# Per-user tool overrides
+/.claude/settings.local.json

@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="How the Autonomous Kit is put together, and why." />
+    <title>Autonomous Kit architecture</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          sans-serif;
+        line-height: 1.55;
+      }
+      body {
+        margin: 0 auto;
+        max-width: 54rem;
+        padding: 2rem 1.25rem 4rem;
+      }
+      code {
+        font-size: 0.9em;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 1rem 0 2rem;
+        font-size: 0.95rem;
+      }
+      th,
+      td {
+        border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+        padding: 0.5rem 0.6rem;
+        text-align: left;
+        vertical-align: top;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Autonomous Kit architecture</h1>
+
+    <h2>The shape of it</h2>
+    <p>
+      Plain Node modules under <code>scripts/</code>, with no runtime dependencies, plus thin
+      adapters for each tool. Every module is pure enough to test without a repository: the
+      expensive I/O is at the edges, and the decisions are functions over data the caller supplies.
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Module</th>
+          <th>Responsibility</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>scripts/autonomous-config.mjs</code></td>
+          <td>
+            Reads <code>autonomous.config.json</code> and merges it over the defaults. Everything
+            project-specific enters here and nowhere else. A malformed file degrades to defaults
+            with a note rather than throwing, because every caller is a check or a hook that must
+            not be the reason work stops. The default protected paths are the autonomous kit's own
+            files.
+          </td>
+        </tr>
+        <tr>
+          <td><code>scripts/work.mjs</code></td>
+          <td>
+            The queue: schema, approval, dependencies and cycles, evidence, and the status view.
+            Also the command surface —
+            <code>status</code>, <code>check</code>, <code>no-yield</code>, <code>brief</code>,
+            <code>quiet</code>, <code>config</code>. In the package's own folder, which has no
+            queue, the queue commands say so and exit zero.
+          </td>
+        </tr>
+        <tr>
+          <td><code>scripts/live-state.mjs</code></td>
+          <td>
+            Checks <code>work/CHECKPOINT.md</code> against the items: the objective names a real
+            item, every open item has a queue row, and the part above the log stays small. Also the
+            decision about whether there is still approved work to do.
+          </td>
+        </tr>
+        <tr>
+          <td><code>scripts/lane-guard.mjs</code></td>
+          <td>
+            Which changed paths, in the working tree and in commits not yet pushed upstream, belong
+            to the support lane; whether the instructions still name a live milestone, whether their
+            references still resolve, whether every document is mapped and every accepted task is in
+            the changelog, plus the privacy and commit-identity scans.
+          </td>
+        </tr>
+        <tr>
+          <td><code>scripts/documentation.mjs</code></td>
+          <td>
+            Fingerprints a configured set of sources, compares them with the stamp on a living
+            document, and rewrites that one stamp line on request. The only writer in the module,
+            and it never touches prose.
+          </td>
+        </tr>
+        <tr>
+          <td><code>scripts/verify.mjs</code></td>
+          <td>
+            Runs a command between two hashes of the source tree and writes a receipt. A receipt
+            whose tree moved during the run is not evidence.
+          </td>
+        </tr>
+        <tr>
+          <td><code>scripts/context-hook.mjs</code></td>
+          <td>
+            The lifecycle adapter: reads the checkpoint and the items and returns a bounded block of
+            recovery context. Always writes one JSON object and always exits zero. The Claude Code
+            <code>SessionStart</code> hook prints the same render.
+          </td>
+        </tr>
+        <tr>
+          <td><code>bin/autonomous-install.mjs</code></td>
+          <td>
+            Copies the autonomous kit verbatim, renders the scaffold in
+            <code>template/</code> with the answers, merges rather than replaces
+            <code>package.json</code>, <code>.gitignore</code>, and an existing
+            <code>.claude/settings.json</code> (after a backup), and stamps the living documents by
+            running the installed copy as its own process. It works out the whole plan before
+            writing, so a dry run reports what a real run writes, and names the protected files it
+            writes in a support-lane record under <code>work/messages/</code>, so the project's
+            check passes at once. It writes the project's work state (the coordination files and the
+            setup task) and the living documents only on a first install. Run again, it updates: the
+            answers come from the project's config, the config is merged, and
+            <code>--force</code> replaces only a file whose bytes still match an install record's
+            pin. It refuses a project on version 1 of the autonomous kit.
+          </td>
+        </tr>
+        <tr>
+          <td><code>bin/autonomous-uninstall.mjs</code></td>
+          <td>
+            Removes what the install records under <code>work/messages/</code> say the installer
+            wrote, while the bytes still match; puts back what <code>--force</code> replaced; takes
+            only the kit's part out of the files it merged into; and leaves changed files alone.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>Decisions worth knowing</h2>
+    <p>
+      <strong>Each fact is written once.</strong> A task's status, owner, and files live only in its
+      item under <code>work/items/</code>. The coordinator's queue and dated log live in
+      <code>work/CHECKPOINT.md</code>, whose rows name item ids rather than copying them. Version 1
+      kept the same facts in four files and a validator checked that the copies agreed.
+    </p>
+    <p>
+      <strong>One configuration file, read at the edge.</strong> The alternative, constants per
+      module, would tie the scripts to one project. Defaults are generous enough that a three-line
+      config works.
+    </p>
+    <p>
+      <strong>Checks report everything, not the first failure.</strong> The task checks and the
+      autonomous kit checks are independent lanes. Returning early let one incomplete task hide
+      every other problem, and <code>check</code> is often the only thing a session runs.
+    </p>
+    <p>
+      <strong>Hooks fail open, checks fail closed.</strong> A hook that blocks is worse than a hook
+      that misses, so every hook prints a visible note and lets the work go on after an internal
+      error: the context, compaction, and autosave hooks exit zero, and the two
+      <code>PreToolUse</code> guards exit one, which Claude Code shows as a notice without blocking.
+      Only a real violation found by a guard exits two and blocks the call. The deterministic
+      backstop is <code>node scripts/work.mjs check</code>, which fails on the same conditions.
+    </p>
+    <p>
+      <strong>Reads are paranoid where a hash matters.</strong> The documentation reader refuses
+      symbolic links, reparse points, and multiply linked files, and re-checks file identity after
+      reading. A fingerprint that can be fooled is worse than no fingerprint. The root is resolved
+      with the native realpath so a short-name temporary directory does not look like a reparse
+      point.
+    </p>
+    <p>
+      <strong>Line endings are normalized for text.</strong> <code>.gitattributes</code> checks
+      every text file out with LF on every platform, and the fingerprints normalize line endings
+      anyway, so a page an editor saved with CRLF is not marked stale. Archived bytes are the
+      exception: they are pinned exactly and kept out of Git's conversion.
+    </p>
+    <p>
+      <strong>Cooperative-host threat model.</strong> These guards catch the accidental lapse. They
+      are not access control, and a recorded, expiring override exists for a real emergency.
+    </p>
+  </body>
+</html>

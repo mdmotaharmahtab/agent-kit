@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          # The npm cache needs a lockfile; a project without one runs uncached.
+          cache: ${{ hashFiles('package-lock.json') != '' && 'npm' || '' }}
+
+      # CI makes no commits, so the identity check is given the configured
+      # address; every other part of the check runs as it does locally.
+      - name: Autonomous kit checks (queue, lanes, privacy, references)
+        run: |
+          email="$(node -p "require('./autonomous.config.json').git?.commitEmail || ''")"
+          GIT_AUTHOR_NAME=ci GIT_COMMITTER_NAME=ci \
+            GIT_AUTHOR_EMAIL="$email" GIT_COMMITTER_EMAIL="$email" \
+            node scripts/work.mjs check
+
+      - name: Documentation freshness and archive integrity
+        run: node scripts/documentation.mjs check
+
+      # The project's own steps run once it has a lockfile, each only when
+      # package.json defines that script.
+      - name: Install dependencies
+        if: hashFiles('package-lock.json') != ''
+        run: npm ci
+
+      - name: Prettier, ESLint, and tests
+        if: hashFiles('package-lock.json') != ''
+        run: |
+          npm run --if-present format:check
+          npm run --if-present lint
+          npm run --if-present test

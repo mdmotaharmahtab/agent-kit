@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MCP auth game, Level 1: The fixed key</title>
+<link rel="stylesheet" href="../../assets/game.css">
+</head>
+<body>
+<header class="top">
+  <div>
+    <div class="level" id="lvlLabel"></div>
+    <h1 id="lvlTitle"></h1>
+  </div>
+  <div class="progress" id="progress" aria-label="Progress"></div>
+  <div class="unlocked" id="unlockedCount"></div>
+</header>
+
+<main>
+  <section class="stage" aria-label="The map">
+    <div class="phase" id="phase"></div>
+    <svg class="map" viewBox="0 0 640 300" role="img" aria-label="The map: Anika and Ben and Claude Code inside Northwind, with any copy of the key below them; Atlas MCP and its key records inside Helix. A request with the key goes from Claude Code to Atlas MCP, Atlas looks up the key's hash in its records, and a response comes back. A second arrow shows a copy of the key reaching Atlas MCP too.">
+      <defs>
+        <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/></marker>
+        <marker id="ahm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--border)"/></marker>
+      </defs>
+      <rect class="zone" x="10" y="30" width="350" height="250" rx="12"/>
+      <text class="zone-label" x="26" y="52">NORTHWIND (the customer)</text>
+      <rect class="zone" x="400" y="30" width="230" height="250" rx="12"/>
+      <text class="zone-label" x="416" y="52">HELIX (the vendor)</text>
+
+      <g class="node" id="n-people">
+        <rect x="30" y="70" width="130" height="64" rx="10"/>
+        <text x="95" y="98" text-anchor="middle">Anika and Ben</text>
+        <text class="sub" x="95" y="118" text-anchor="middle">share one key</text>
+      </g>
+      <g class="node" id="n-claude">
+        <rect x="200" y="95" width="140" height="70" rx="10"/>
+        <text x="270" y="125" text-anchor="middle">Claude Code</text>
+        <text class="sub" x="270" y="145" text-anchor="middle">the MCP host</text>
+      </g>
+      <g class="node" id="n-copy">
+        <rect x="30" y="196" width="130" height="64" rx="10"/>
+        <text x="95" y="224" text-anchor="middle">Any copy</text>
+        <text class="sub" x="95" y="244" text-anchor="middle">laptop, chat, log</text>
+      </g>
+      <g class="node" id="n-atlas">
+        <rect x="440" y="75" width="160" height="80" rx="10"/>
+        <text x="520" y="105" text-anchor="middle">Atlas MCP</text>
+        <text class="sub" x="520" y="125" text-anchor="middle">the MCP server</text>
+        <text class="sub" x="520" y="141" text-anchor="middle">checks the key</text>
+      </g>
+      <g class="node" id="n-keys">
+        <rect x="440" y="190" width="160" height="64" rx="10"/>
+        <text x="520" y="216" text-anchor="middle">Key records</text>
+        <text class="sub" x="520" y="236" text-anchor="middle">hash &#8594; northwind-pilot</text>
+      </g>
+
+      <path class="wire" id="w-ask" d="M160,108 L198,122" marker-end="url(#ahm)"/>
+      <text class="wire-label" x="180" y="98" text-anchor="middle">asks</text>
+      <path class="wire" id="w-req" d="M340,112 L438,112" marker-end="url(#ahm)"/>
+      <text class="wire-label" x="389" y="104" text-anchor="middle">request + key</text>
+      <path class="wire" id="w-res" d="M438,142 L342,142" marker-end="url(#ahm)"/>
+      <text class="wire-label" x="390" y="158" text-anchor="middle">response</text>
+      <path class="wire" id="w-look" d="M520,155 L520,188" marker-end="url(#ahm)"/>
+      <text class="wire-label" x="528" y="176">look up</text>
+      <path class="wire" id="w-copy" d="M160,228 C260,268 400,250 438,152" marker-end="url(#ahm)"/>
+      <text class="wire-label" x="262" y="274" text-anchor="middle">the same key, from anyone</text>
+
+      <g class="extra" id="x-key">
+        <rect x="214" y="70" width="112" height="20" rx="10" fill="var(--warn-soft)" stroke="var(--warn)"/>
+        <text x="270" y="84" text-anchor="middle" font-size="11">atk_7QmZ9xL2&#8230;</text>
+      </g>
+      <g class="extra" id="x-hdr">
+        <rect x="200" y="172" width="140" height="20" rx="10" fill="var(--bad-soft)" stroke="var(--bad)"/>
+        <text x="270" y="186" text-anchor="middle" font-size="10">X-Atlas-User: any name</text>
+      </g>
+      <g class="extra" id="x-log">
+        <rect x="408" y="258" width="214" height="18" rx="9" fill="var(--teal-soft)" stroke="var(--teal)"/>
+        <text x="515" y="271" text-anchor="middle" font-size="10">log: northwind-pilot, AC-0417, 200</text>
+      </g>
+      <circle class="packet" id="packet" r="6" cx="-20" cy="-20"/>
+    </svg>
+    <div class="legend">Dashed and grey: not discovered yet. Blue: unlocked. Red: where a test went wrong. Purple outline: where you are now.</div>
+  </section>
+
+  <section class="panel" id="panel" aria-live="polite"></section>
+</main>
+<div class="toast" id="toast"></div>
+
+<script src="../../assets/worlds.js"></script>
+<script src="world.js"></script>
+<script src="../../assets/game.js"></script>
+<script>
+(function () {
+"use strict";
+const { $, light, mark, unlock } = GAME, focusNode = GAME.focus, sendPacket = GAME.packet;
+
+// ---------- the stops ----------
+const stops = [
+{
+  phase: "briefing",
+  html: `
+  <div class="kicker">Mission briefing</div>
+  <h2>A pilot on Monday, and no time for paperwork</h2>
+  <div class="box mission"><span class="tag">The situation</span>
+  You are <b>Priya</b>, tech lead at <b>Helix</b>, which builds <b>Atlas</b>, a shipment-tracking data product, for
+  <b>Northwind Freight</b>, a logistics company. It is Wednesday. On Monday Northwind starts a
+  pilot of <b>Atlas MCP</b>, Atlas's MCP server: the door AI apps call (MCP is the Model Context Protocol).</div>
+  <p>Two Northwind account managers will use it from <b>Claude Code</b>, an AI assistant in a terminal on their laptops;
+  it is their <b>MCP host</b>, the AI app that calls MCP servers for them. <b>Anika</b> manages customer account
+  AC-0417, <b>Ben</b> only AC-0999.</p>
+  <p><b>Marcus</b>, Northwind's security lead: <i>"We need this working by Monday, and a new sign-in setup takes months."</i>
+  <b>Tomasz</b>, Helix's backend engineer: <i>"Give them a key. Five minutes."</i></p>
+  <div class="box why"><span class="tag">Why this level matters</span>
+  Level 0 showed that a request carries no proof by itself. Atlas needs a <b>credential</b> in the
+  <code>Authorization</code> header. The simplest is an <b>API key</b>: one long secret string that Helix makes and
+  Northwind pastes into its AI app. Many real MCP servers ship this way, so every later level is measured against it.</div>
+  <p><b>Your mission:</b> make the key, set it up, follow a request, then test it against real events. The map is the
+  goal picture; it lights up as you go.</p>`,
+  ready: true,
+  enter() { focusNode(null); }
+},
+{
+  phase: "setup",
+  html: `
+  <div class="kicker">Stop 1 of 6 &middot; Making the key</div>
+  <h2>A string nobody can guess</h2>
+  <p>Wednesday, 10:00. Before any request, Tomasz makes the key on Helix's side. Two choices matter.</p>
+  <div class="box how"><span class="tag">How</span>
+  <b>1. Random, from a secure source.</b> Python's <code>secrets</code> module draws from the operating system's
+  secure random source:
+  <pre class="req">&gt;&gt;&gt; import secrets
+&gt;&gt;&gt; "atk_" + secrets.token_urlsafe(32)
+'atk_7QmZ9xL2vR4kT8nB1cW6yF3hJ0sD5gA2pEXAMPLEKEY'</pre>
+  32 random bytes become 43 characters (the sample on this page ends in EXAMPLEKEY, so no one takes it for a real
+  key). A key built from a name, a date or Python's ordinary <code>random</code> module can be predicted:
+  <b>Vex</b>, an attacker, could see one key and work out the next.<br><br>
+  <b>2. A prefix.</b> <code>atk_</code> (for "Atlas key") is not secret. It lets <b>secret scanners</b>, tools that search
+  code, chats and logs for strings shaped like keys, recognise an Atlas key and raise an alarm. GitHub's personal access
+  tokens start <code>ghp_</code> for the same reason.</div>
+  <div class="challenge" id="ch1">
+    <h3>Challenge</h3>
+    <p>Atlas must remember the key to check it later. Six months from now, a copy of Atlas's database backup,
+    <code>atlas-db-2027-04-01.sql.gz</code>, leaks from a misconfigured storage bucket. <b>Which way of storing the key
+    leaves Vex nothing he can use?</b></p>
+    <div class="opts">
+      <button class="opt" data-ok="0" data-fb="Vex opens the backup and reads atk_7QmZ9xL2... in the keys column. He puts it in an Authorization header, and Atlas answers him as Northwind. One leaked file hands over every customer's key. If an admin page can show the key again, so can anyone who reads the database.">In plain text, so Helix's admin page can show it again</button>
+      <button class="opt" data-ok="0" data-fb="To check a request, Atlas must decrypt the stored key, so the decryption key sits on the same servers and in the same deploy files. Whoever steals the backup often gets the configuration too, and then every key decrypts. Encryption moved the secret; it did not remove it.">Encrypted, with the decryption key in Atlas's configuration</button>
+      <button class="opt" data-ok="1" data-fb="Right. A hash is a one-way fingerprint: easy to compute from the key, impossible to turn back into it. Atlas stores the SHA-256 hash (SHA-256 is a standard hash function): 64 characters from 0-9 and a-f, such as 5b1e9c...a7d2. Vex finds only that. Finding a key that produces it means trying around 10^77 possibilities. To check a request, Atlas hashes the key it is shown and compares fingerprints. Atlas shows the key once, when it is made, and never again.">Only a hash of the key (its fingerprint)</button>
+    </div>
+    <div class="feedback" id="fb1"></div>
+  </div>
+  <details class="more"><summary>Why a fast hash is right here, unlike for passwords</summary><div>
+  Passwords are stored with slow hashes because people choose guessable ones: <code>Summer2026!</code> is on every
+  guessing list. One graphics card computes about 20 billion SHA-256 hashes a second, so a fast hash lets a thief try a
+  whole list in a second. A key from <code>secrets.token_urlsafe(32)</code> is on no list. It is one of 2<sup>256</sup>
+  equally likely values. At 20 billion guesses a second, trying half of them takes about 10<sup>59</sup> years. A slow
+  hash cannot make that search harder; it only slows every honest request.</div></details>`,
+  ready: false,
+  enter(api) {
+    focusNode("n-keys");
+    unlock("API key: a long random secret");
+    api.choice("#ch1", "#fb1", () => { light(["n-keys"]); unlock("store only the key's hash"); });
+  }
+},
+{
+  phase: "setup",
+  html: `
+  <div class="kicker">Stop 2 of 6 &middot; Whose key, and how it travels</div>
+  <h2>One account, one hand-over, one paste</h2>
+  <p>A key alone means nothing. Tomasz files a record against its hash that says what it may do:</p>
+  <pre class="req">key record   k_01
+  hash       sha256:5b1e9c...a7d2
+  account    northwind-pilot
+  customers  <span class="hl" id="customers">?</span>
+  status     active      created 2030-03-06T10:00Z      expires: never</pre>
+  <p><code>northwind-pilot</code> is a <b>service account</b>: an account for a program or a group, not for a person.
+  Atlas has no record of Anika or Ben.</p>
+  <div class="challenge" id="ch2">
+    <h3>Challenge</h3>
+    <p>Anika manages AC-0417, Ben AC-0999, and both paste the same key. <b>Which customers must
+    <code>northwind-pilot</code> allow?</b></p>
+    <div class="opts">
+      <button class="opt" data-ok="0" data-fb="On Monday Ben asks Claude Code about AC-0999. His request carries the same key as Anika's, so Atlas sees northwind-pilot and replies 403: &quot;I know who you are, and the answer is no.&quot; Ben cannot work on day one. Atlas cannot treat Ben differently, because it cannot tell his requests from Anika's.">Only AC-0417</button>
+      <button class="opt" data-ok="1" data-fb="Right. Both account managers can work. The price is written into the record: whoever holds the key may read both customers' data. So Ben can read AC-0417 and Anika can read AC-0999. The tests come back to this.">AC-0417 and AC-0999</button>
+      <button class="opt" data-ok="0" data-fb="Then the key also reads every customer nobody in the pilot manages. If it leaks, all of Northwind's customer data leaks with it. Give a key the least it needs.">Every Northwind customer, to save edits later</button>
+    </div>
+    <div class="feedback" id="fb2"></div>
+  </div>
+  <div id="handBox" style="display:none">
+  <div class="box how"><span class="tag">How: the hand-over and the paste</span>
+  Tomasz sends the key to Northwind's admin by a <b>one-time secret link</b>, a page that shows it once and then
+  deletes it. (An email would sit in mailboxes and backups for years.) The admin adds Atlas to each account manager's
+  Claude Code:
+  <pre class="req">claude mcp add --transport http atlas https://mcp.atlas.example/mcp \\
+  --header "Authorization: Bearer atk_7QmZ9xL2..."</pre>
+  <code>--transport http</code>: a remote server, reached over HTTP. <code>--header</code>: add this line to every
+  request. <code>Bearer</code>: "whoever holds this may use it" (Level 0). Claude Code saves it in
+  <code>~/.claude.json</code>, a settings file in the home folder. The key now lives on two laptops.</div>
+  <details class="more"><summary>Which hosts can send a fixed header?</summary><div>
+  <b>Claude Code:</b> yes, with <code>--header</code> as above. In a project's shared <code>.mcp.json</code> file, write
+  <code>"Authorization": "Bearer \${ATLAS_KEY}"</code>: Claude Code fills in the environment variable, so the key itself
+  never lands in the repository.<br>
+  <b>Claude on the web, desktop and mobile:</b> only in beta. The "Request headers" section of Add custom connector is
+  available to a limited set of organizations. An organization Owner enters the key once, and every member's requests
+  carry it. Anthropic's own documentation says not to use it to tell which user is calling.<br>
+  <b>ChatGPT:</b> no. OpenAI's Apps SDK documentation says ChatGPT cannot present custom API keys; a server must offer
+  a per-person sign-in, or no authentication at all.<br>
+  Checked 2026-10.</div></details>
+  <details class="more"><summary>Common misreading: "the key is Anika's key"</summary><div>
+  It is pasted on Anika's laptop, so it feels like hers. But nothing in it, and nothing in Atlas's record, says Anika.
+  Atlas sees a string that maps to <code>northwind-pilot</code>, whether Anika, Ben or anyone else sent it.</div></details>
+  </div>`,
+  ready: false,
+  enter(api) {
+    focusNode("n-claude");
+    api.choice("#ch2", "#fb2", () => {
+      $("#customers").textContent = "AC-0417, AC-0999";
+      $("#handBox").style.display = "block";
+      light(["n-people", "n-claude", "w-ask", "x-key"]);
+      unlock("service account");
+      setTimeout(() => unlock("fixed header in the host"), 1900);
+    });
+  }
+},
+{
+  phase: "request",
+  html: `
+  <div class="kicker">Stop 3 of 6 &middot; The request</div>
+  <h2>Monday, 9:12, with the key</h2>
+  <p>Monday, 9:12. Anika asks Claude Code how many shipments AC-0417 booked this week. Claude Code sends
+  Level 0's request, now with the key from its settings. <b>Click each underlined part.</b></p>
+  <pre class="req"><span class="part" data-k="line">POST /mcp HTTP/1.1
+Host: mcp.atlas.example</span>
+<span class="part" data-k="auth"><span class="hl">Authorization: Bearer atk_7QmZ9xL2vR4kT8nB1cW6yF3hJ0sD5gA2pEXAMPLEKEY</span></span>
+<span class="part" data-k="mcp">Content-Type: application/json
+Accept: application/json, text/event-stream
+MCP-Protocol-Version: 2026-07-28
+Mcp-Method: tools/call
+Mcp-Name: shipment_summary</span>
+
+<span class="part" data-k="body">{"jsonrpc": "2.0", "id": 7, "method": "tools/call",
+ "params": {"name": "shipment_summary",
+            "arguments": {"customer": "AC-0417"},
+            "_meta": {"io.modelcontextprotocol/clientInfo":
+                        {"name": "claude"}}}}</span></pre>
+  <div class="explain" id="reqText"><span class="hint">Click a part of the request.</span></div>
+  <div class="challenge" id="ch3">
+    <h3>Challenge: what Atlas does at the door</h3>
+    <p>Put Atlas's checks in order. Click the step that comes first, then the next.</p>
+    <div id="order3"></div>
+  </div>`,
+  ready: false,
+  enter(api) {
+    focusNode("n-claude");
+    light(["n-atlas"]);
+    api.parts("pre.req .part", {
+      line: "<b>Where it goes.</b> A <code>POST</code> to <code>/mcp</code>, Atlas's MCP door, on the server <code>mcp.atlas.example</code>. Exactly as in Level 0.",
+      auth: "<b>The key.</b> In the <code>Authorization</code> header, the standard place for a credential. Claude Code adds this exact line to every request, for Anika and for Ben alike, because it is the same line in both laptops' settings.",
+      mcp: "<b>MCP's own headers</b> from Level 0: the format, the protocol version, and a copy of what the body asks for (call a tool, named <code>shipment_summary</code>), so Atlas can route the request before opening the body.",
+      body: "<b>The question.</b> Call the tool <code>shipment_summary</code>, which returns how many shipments a customer booked, for AC-0417. Look for Anika's name anywhere in the request: it is not there."
+    }, "#reqText");
+    api.order("#order3", [
+      { t: "Read the <code>Authorization</code> header and take the string after <code>Bearer</code>.",
+        why: "No header at all: 401, Atlas's \"I don't know who you are\" from Level 0.",
+        early: "Atlas cannot check a key it has not read yet.",
+        onRight() { light(["w-req"]); sendPacket("w-req", "var(--warn)"); } },
+      { t: "Check the format: <code>atk_</code> followed by 43 characters.",
+        why: "A cheap check before any lookup. A malformed or half-pasted key fails here: 401.",
+        early: "First Atlas needs the string itself, from the header." },
+      { t: "Hash the presented key with SHA-256.",
+        why: "Atlas stored only the hash, so it can only compare hashes.",
+        early: "Hashing comes after the cheap format check, so junk costs Atlas nothing." },
+      { t: "Look up the hash: record <code>k_01</code>, active, account <code>northwind-pilot</code>.",
+        why: "No match, or a switched-off key: 401. This answers \"who is calling?\", and the answer is an account, not a person.",
+        early: "The records hold hashes, so Atlas must hash the key before it can look anything up.",
+        onRight() { light(["w-look"]); sendPacket("w-look"); } },
+      { t: "Check the customer: is AC-0417 on <code>northwind-pilot</code>'s list?",
+        why: "Not on the list: 403, \"I know who you are, and the answer is no\". This answers \"what may they do?\", for the account.",
+        early: "Atlas cannot ask what the caller may do before it knows which account is calling." },
+      { t: "Run <code>shipment_summary</code>, reply, and write the audit line.",
+        why: "Only after both answers are yes.",
+        early: "The tool runs last, after both questions are answered.",
+        onRight() { light(["w-res"]); sendPacket("w-res", "var(--ok)"); } }
+    ], () => unlock("Atlas checks the key's hash, then the account's list"));
+  }
+},
+{
+  phase: "response",
+  html: `
+  <div class="kicker">Stop 4 of 6 &middot; The response</div>
+  <h2>200, and one line in the log</h2>
+  <p>Both checks pass. Atlas runs the tool and replies <b>200</b> (OK):</p>
+  <pre class="req">HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"jsonrpc": "2.0", "id": 7,
+ "result": {"resultType": "complete",
+            "content": [{"type": "text",
+              "text": "AC-0417: 23 shipments booked this week (412 this year)."}]}}</pre>
+  <p>Then it writes its <b>audit log</b>, the record of who did what. One day <b>Yuki</b>, Northwind's compliance lead,
+  will read it. Northwind promises its customers it can say who looked at their data.</p>
+  <pre class="req">2030-03-11T09:12:03Z key=k_01 account=<span class="hl">northwind-pilot</span> tool=shipment_summary customer=AC-0417 status=200 ip=203.0.113.24</pre>
+  <p>The line names the key and its account. It cannot name Anika: Atlas never learned her name.</p>
+  <div class="challenge" id="ch4">
+    <h3>Challenge: what does Atlas reply?</h3>
+    <p>Atlas still refuses some requests. Sort these.</p>
+    <div id="sort4"></div>
+  </div>`,
+  ready: false,
+  enter(api) {
+    focusNode("n-atlas");
+    light(["x-log"]);
+    api.sort("#sort4", [
+      { t: "The key with one character wrong, from a careless paste.", a: "401",
+        fb: "Its hash matches no record, so Atlas does not know who is calling: <code>401 Unauthorized</code>, with the header <code>WWW-Authenticate: Bearer error=\"invalid_token\"</code> to say the key was not accepted. There is no sign-in page to point to.",
+        wrong: {
+          "403": "403 would mean Atlas knows which account is calling. One changed character gives a completely different hash, so no record matches and Atlas knows nobody.",
+          "200": "Then any near miss would open the door. The changed character gives a different SHA-256 hash, the lookup finds nothing, and the tool never runs." } },
+      { t: "The real key, asking for AC-0123, a customer outside the pilot.", a: "403",
+        fb: "Atlas knows the account, and AC-0123 is not on its list: 403.",
+        wrong: {
+          "401": "401 would say Atlas cannot tell who is calling. But the key is real: its hash matches <code>k_01</code>, so Atlas knows the account. The second question fails, not the first.",
+          "200": "Then the key would read customers outside the pilot. The account's list is AC-0417 and AC-0999, and AC-0123 is not on it." } },
+      { t: "The real key, asking for AC-0999.", a: "200",
+        fb: "AC-0999 is on <code>northwind-pilot</code>'s list: 200. Atlas cannot ask who typed the question.",
+        wrong: {
+          "401": "The key is real and active, so the lookup finds <code>k_01</code> and Atlas knows the account. 401 is only for a key it cannot match.",
+          "403": "403 would need AC-0999 to be off the list. It is on it, because Ben needs it, so whoever holds the key gets the numbers." } },
+      { t: "The real key, after Helix switches its record to <code>revoked</code> (turned off for good).", a: "401",
+        fb: "The hash still matches, but the record is revoked, so the key proves nothing any more: 401.",
+        wrong: {
+          "403": "403 says \"I know who you are\". A revoked record no longer proves anything, so Atlas treats the caller as unknown.",
+          "200": "Then revoking would do nothing, and a leaked key could never be stopped. Atlas reads <code>status: revoked</code> at the lookup and stops there." } }
+    ], ["401", "403", "200"], () => unlock("the audit names the account, not the person"));
+  }
+},
+{
+  phase: "tests",
+  html: `
+  <div class="kicker">Stop 5 of 6 &middot; Tests</div>
+  <h2>Two weeks of pilot, and one "what if"</h2>
+  <p>Helix can <b>rotate</b> the key (replace it with a new one), but nobody has set a date for that. Predict what
+  Atlas replies each time, then watch the map. Watch for the pattern, and for the one card that breaks it. Each answer
+  fills one row of the scorecard.</p>
+  <div class="challenge" id="ch5">
+    <h3>Predict, then watch</h3>
+    <div id="sort5"></div>
+  </div>
+  <div class="challenge" id="ch5b">
+    <h3>Yuki's question</h3>
+    <p>Two weeks into the pilot, Yuki prepares for an audit by customer AC-0417 and asks Helix: <i>"Who read AC-0417's data
+    since the pilot started?"</i> <b>What can Helix truthfully answer?</b></p>
+    <div class="opts">
+      <button class="opt" data-ok="0" data-fb="That needs a name on each request, and no request carried one. Every log line says account=northwind-pilot. Helix would be guessing, and a guess is not traceable to anyone.">"Anika, 14 times, and Ben, twice."</button>
+      <button class="opt" data-ok="1" data-fb="Right. That is all the log knows. Scorecard: does Atlas know which person is calling? <b>No: only &quot;a Northwind key&quot;</b>. For the audit that is not enough: Yuki needs a person.">"Keys k_01 and k_02, account northwind-pilot, 16 times, from these network addresses."</button>
+      <button class="opt" data-ok="0" data-fb="clientInfo names the app, &quot;claude&quot;, and it is the same for Anika and Ben. Any program can write any name there (Level 0).">"The clientInfo line in each request says which person."</button>
+    </div>
+    <div class="feedback" id="fb5b"></div>
+  </div>
+  <details class="more"><summary>Common misreading: "delete the chat message and the leak is fixed"</summary><div>
+  Deleting the message comes last. Assume the key was copied the moment it was posted. First Helix revokes it, issues a
+  new key through a one-time link, and searches its log for calls with <code>k_01</code> from unknown addresses. Then
+  the message goes.</div></details>`,
+  ready: false,
+  enter(api) {
+    focusNode(null);
+    const realReady = api.ready; let parts = 0;
+    api.ready = () => { parts++; if (parts === 2) realReady(); };
+    api.sort("#sort5", [
+      { t: "<b>Tuesday, day 2 of the pilot.</b> Ben, curious, asks Claude Code for AC-0417, Anika's customer.", a: "200",
+        fb: "200, with Anika's numbers. Ben's request carries the same key, so Atlas sees <code>northwind-pilot</code>, whose list has AC-0417. Scorecard: can Anika and a colleague get different access? <b>\"No: everyone behind the key gets the same access\"</b>.",
+        wrong: {
+          "403": "403 would need Atlas to know it is Ben. It sees only <code>northwind-pilot</code>, whose list has AC-0417, so Ben gets Anika's numbers.",
+          "401": "401 means Atlas cannot match the key. Ben's key is the real one, identical to Anika's, so the lookup finds <code>k_01</code>." },
+        onRight() { light(["n-people"]); mark(["n-people"], "bad"); sendPacket("w-req", "var(--bad)"); } },
+      { t: "<b>The kickoff call, the Thursday before the pilot.</b> A Northwind engineer pastes the key into a 15-person chat channel \"so everyone can test\". Two members are guests from a partner company. On the pilot's first Wednesday, Vex breaks into one contractor's chat account, searches for <code>atk_</code>, and sends the key from his own laptop.", a: "200",
+        fb: "200, for both customers, from anywhere. Atlas checks the string, never the sender, and nothing in the key expires: if nobody notices, it works for months. The prefix that helps scanners helped Vex search too, which is why scanners must watch the chat first. Scorecard: if the credential is copied, how bad is it? <b>\"Bad: it works for anyone, for months\"</b>.",
+        wrong: {
+          "401": "401 would need the key to be unknown or revoked. Vex holds the exact string and nobody has revoked it yet, so the hash matches <code>k_01</code>.",
+          "403": "403 would need Atlas to know the caller is Vex. It sees only <code>northwind-pilot</code>, from a network address it has no rule about." },
+        onRight() { light(["n-copy", "w-copy"]); mark(["n-copy", "w-copy"], "bad"); sendPacket("w-copy", "var(--bad)"); } },
+      { t: "<b>The pilot's first Friday.</b> Marcus finds the chat message. Helix revokes <code>k_01</code> at once and sends a new key, <code>k_02</code>, to Northwind's admin by one-time link. Vex tries his copy of <code>k_01</code> again.", a: "401",
+        fb: "401: the hash still matches <code>k_01</code>, but the record says revoked. This is the card that breaks the pattern. Revoking is the one lever a key gives, and it stops everyone at once: Anika and Ben too, until their settings hold <code>k_02</code>.",
+        wrong: {
+          "200": "Then a leak could never be stopped. Atlas reads <code>status: revoked</code> at the lookup and stops there.",
+          "403": "403 says \"I know who you are, and no\". A revoked key identifies nobody, so Atlas does not know the caller: 401." },
+        onRight() { mark(["w-copy"], null); sendPacket("w-copy", "var(--ok)"); } },
+      { t: "<b>What if</b> Anika left Northwind next month? IT would disable her Northwind account that day. But she had also set up Claude Code on her home computer, so its <code>~/.claude.json</code> would still hold the key. She asks for AC-0417 from home.", a: "200",
+        fb: "200. Northwind's leaver process switches off Northwind accounts, and Atlas never used one. Rotating the key would cut off Ben too, so everyone who stays would need the new one. Scorecard: when someone leaves Northwind, is their access gone? <b>\"No: the key keeps working until Helix rotates it\"</b>.",
+        wrong: {
+          "401": "401 would need Atlas to notice that she left. Atlas never checks her Northwind account; it checks the key's hash, and the hash still matches an active record.",
+          "403": "403 would need a rule about Anika. Atlas has none: it knows only <code>northwind-pilot</code>, which may still read AC-0417." },
+        onRight() { light(["n-copy", "w-copy"]); mark(["n-copy", "w-copy"], "bad"); sendPacket("w-copy", "var(--bad)"); } },
+      { t: "<b>Every night at 02:00.</b> Northwind's job <code>nightly-shipments</code>, a program with no person behind it, reads the current key from Northwind's vault (a locked store for secrets that logs every read) and calls <code>shipment_summary</code> for both customers.", a: "200",
+        fb: "200, and this time that is good news. No browser, no sign-in, nobody to click anything. Scorecard: does it work for a program with no person? <b>\"Yes\"</b>. And how much setup does Northwind do? <b>\"Minutes: paste one key\"</b>.",
+        wrong: {
+          "401": "The job reads the current key, <code>k_02</code>, from the vault, so its hash matches an active record. Nothing here is wrong.",
+          "403": "Both customers are on <code>northwind-pilot</code>'s list, so the second question is yes too. A program is exactly what a key suits." },
+        onRight() { mark(["w-req"], "ok"); sendPacket("w-req", "var(--ok)"); } }
+    ], ["200", "401", "403"], () => unlock("a key works for whoever holds it"));
+    api.choice("#ch5b", "#fb5b", () => { light(["x-log"]); });
+  }
+},
+{
+  phase: "tests",
+  html: `
+  <div class="kicker">Stop 6 of 6 &middot; Patching the key</div>
+  <h2>Four patches, one hole</h2>
+  <p>To keep the five-minute setup, Tomasz proposes four patches. Each fixes something real; read what each
+  leaves open.</p>
+  <table class="score">
+    <tr><th>Patch</th><th>Fixes</th><th>Leaves open</th></tr>
+    <tr><td><b>Per-team keys</b>, one per account team</td>
+      <td>Ben gets 403 on AC-0417. The log names the team.</td>
+      <td>Each team still shares a key. More keys to hand out.</td></tr>
+    <tr><td><b>An IP allowlist:</b> the key works only from Northwind's office addresses, <code>203.0.113.0/24</code></td>
+      <td>A copied key fails from Vex's laptop.</td>
+      <td>Anika at home fails too, unless she uses Northwind's VPN (its encrypted tunnel into the office network).
+      Anyone in the office gets in.</td></tr>
+    <tr><td><b>Rotation</b> every 90 days; old and new keys both work for a week</td>
+      <td>Old copies stop working.</td>
+      <td>A fresh copy works for up to 90 days. Each rotation is a new hand-over.</td></tr>
+    <tr><td><b>A name header:</b> Claude Code also sends <code>X-Atlas-User: anika@northwind.example</code></td>
+      <td>Names appear in the log.</td>
+      <td>See the challenge.</td></tr>
+  </table>
+  <div class="challenge" id="ch6">
+    <h3>Challenge</h3>
+    <p>Ben sets <code>X-Atlas-User</code> to <code>anika@northwind.example</code> in his Claude Code settings and
+    asks for AC-0417. <b>What happens?</b></p>
+    <div class="opts">
+      <button class="opt" data-ok="0" data-fb="The key is the same on Anika's laptop and Ben's. It tells Atlas northwind-pilot, nothing more, so Atlas has nothing to compare the name with.">Atlas refuses: the key tells it this is Ben</button>
+      <button class="opt" data-ok="1" data-fb="Right. The header is only a claim, a line the caller writes. Anyone with the key can type any name, so the log now looks traceable and is not. For Yuki that is worse than no name: a confident, false record. Scorecard: does the audit log name the person? <b>&quot;No: it names the key; a name header is only a claim&quot;</b>. A name Atlas can trust has to be proven by a sign-in the person does; Level 2 builds that.">Atlas replies 200 and logs anika@northwind.example</button>
+      <button class="opt" data-ok="0" data-fb="Claude Code sends whatever headers its settings hold; that is what --header is for. And Ben does not need Claude Code at all: curl, a command-line tool for HTTP requests, sends the same request with -H &quot;X-Atlas-User: anika@northwind.example&quot;.">Claude Code refuses to send another person's address</button>
+    </div>
+    <div class="feedback" id="fb6"></div>
+  </div>
+  <details class="more"><summary>The IP allowlist and AI apps that run in the cloud</summary><div>
+  Claude Code runs on the laptop, so its requests come from Northwind's office or VPN addresses, and an allowlist can
+  work. Claude on the web connects from Anthropic's cloud instead: its requests come from <code>160.79.104.0/21</code>,
+  a range shared by every Claude customer. Allowing that range lets in anyone who uses Claude with a copy of the key. An
+  allowlist helps only when the caller has fixed addresses of its own.</div></details>
+  <details class="more"><summary>In real life: buy the key checks (Azure API Management, Amazon API Gateway) or build
+  them</summary><div>
+  <div class="cloud-here"></div>
+  <div data-cloud="azure">
+  <p><b>Buy the key checking; build what the key means.</b> <b>Azure API Management</b> (APIM), Microsoft's API gateway
+  (a server that stands in front of APIs and checks each request first), can stand in front of Atlas MCP. Its
+  <b>subscription keys</b> are API keys. Each subscription holds a pair, primary and secondary, so callers switch to one
+  while you regenerate the other. Callers send the key in the <code>Ocp-Apim-Subscription-Key</code> header (you can
+  rename it per API), not in <code>Authorization</code>, so the Claude Code command below names that header instead. A missing or wrong key is refused with 401 and never reaches Atlas. Policies add the patches: an
+  <code>ip-filter</code> allowlist, rate limits (a cap on calls per minute). Northwind keeps its copy in <b>Azure Key
+  Vault</b>, Azure's vault.</p>
+  <p><b>Helix still writes:</b> which customers each subscription may read, and expiry: APIM has no built-in key expiry or
+  automatic rotation.</p>
+  <pre class="req">claude mcp add --transport http atlas https://mcp.atlas.example/mcp \\
+  --header "Ocp-Apim-Subscription-Key: &lt;the key&gt;"
+
+&lt;!-- APIM policy, inbound section --&gt;
+&lt;ip-filter action="allow"&gt;
+    &lt;address-range from="203.0.113.0" to="203.0.113.255" /&gt;
+&lt;/ip-filter&gt;
+&lt;set-header name="Ocp-Apim-Subscription-Key" exists-action="delete" /&gt;</pre>
+  <p><b>The usual mistake:</b> APIM passes the key on to the backend by default, where it lands in Atlas's own logs. The
+  <code>set-header</code> line removes it. And never give a client the built-in all-access subscription.</p>
+  </div>
+  <div data-cloud="aws">
+  <p><b>Buy the counting, not the access control.</b> <b>Amazon API Gateway</b>, AWS's API gateway (a server that
+  stands in front of APIs and checks each request first), has <b>API keys</b> and <b>usage plans</b> for its REST APIs.
+  A usage plan says which deployed APIs a set of keys may call, with a request rate and a quota (a maximum number of
+  calls per day or month) per key. Callers send the <code>X-API-Key</code> header; a missing or wrong key gets 403, not
+  401. AWS's own guidance is blunt: "Don't use API keys for authentication or authorization to control access to your
+  APIs." A key valid for one API in a plan reaches every API in that plan, and clients can exceed the quotas. AWS points
+  instead to IAM (its own permission system), a Lambda authorizer (your own function that checks each request) or an
+  Amazon Cognito user pool (its sign-in service for app users). Northwind keeps its copy in <b>AWS Secrets
+  Manager</b>, AWS's vault.</p>
+  <p><b>Helix still writes:</b> the customer check, and everything about who the caller is.</p>
+  <pre class="req">aws apigateway create-api-key --name northwind-pilot --enabled
+aws apigateway create-usage-plan-key --usage-plan-id a1b2c3 \\
+    --key-id 4vq3yryqm5 --key-type API_KEY
+# Northwind's side; reading from a file keeps the key out of shell history
+aws secretsmanager create-secret --name atlas/northwind-pilot \\
+    --secret-string file://atlas-key.txt</pre>
+  <p><b>The usual mistake:</b> treating the usage plan as the lock. It counts and slows callers; it does not decide who
+  they are.</p>
+  </div>
+  <div data-cloud="neutral">
+  <p><b>Build it; it is about ten lines.</b> Generate with <code>secrets.token_urlsafe(32)</code>, store only the SHA-256
+  hash, look the key up by its hash. A sketch (<code>db</code> stands for your table):</p>
+  <pre class="req">import secrets, hashlib
+
+def issue_key(account):
+    key = "atk_" + secrets.token_urlsafe(32)        # 32 random bytes, 43 characters
+    db.insert(hash=hashlib.sha256(key.encode()).hexdigest(),
+              account=account, status="active")
+    return key                                       # shown once, never stored
+
+def account_for(presented):
+    if not presented.startswith("atk_"):
+        return None                                  # 401
+    row = db.get(hash=hashlib.sha256(presented.encode()).hexdigest())
+    return row.account if row and row.status == "active" else None</pre>
+  <p>A busy server caches a good lookup for about a minute, to spare its database. The price: a revoked key keeps
+  working for up to that minute.</p>
+  <p>Northwind keeps its copy in a vault such as <b>HashiCorp Vault</b> (one you run yourself), never in a shared
+  document. Teach your secret scanner the format: GitHub secret scanning accepts custom patterns such as
+  <code>atk_[A-Za-z0-9_-]{43}</code>, and push protection can block a commit that contains one.</p>
+  <p><b>The usual mistake:</b> Python's <code>random</code> module or a time-based ID for the key (predictable), or a
+  plain-text column so the admin page can "show it again".</p>
+  </div>
+  <div class="hint">Checked 2026-10.</div>
+  </div></details>`,
+  ready: false,
+  enter(api) {
+    focusNode("n-claude");
+    light(["x-hdr"]);
+    api.choice("#ch6", "#fb6", () => { sendPacket("w-req", "var(--bad)"); unlock("a name header is only a claim"); });
+  }
+},
+{
+  phase: "debrief",
+  html: `
+  <div class="kicker">Debrief</div>
+  <h2>Level 1 complete</h2>
+  <p>What you now know:</p>
+  <ol>
+    <li>An <b>API key</b> is one long random secret with a prefix scanners recognise. Atlas stores only its <b>hash</b>
+    and shows it once.</li>
+    <li>Atlas maps the key to a <b>service account</b> and checks its customer list: 401 for an unknown or revoked key,
+    403 for a customer off the list.</li>
+    <li>The host sends it as a <b>fixed header</b> (<code>claude mcp add --header</code>). ChatGPT cannot; Claude on
+    the web only in beta.</li>
+    <li>Atlas knows "a Northwind key", never the person: shared access, no names in the log, a leaver keeps access, a
+    copy works for anyone. Revoking stops everyone at once.</li>
+    <li>Patches narrow the damage. A name header adds only a <b>claim</b>.</li>
+    <li>The key suits a <b>program with no person</b>, like the nightly job.</li>
+  </ol>
+  <div id="chips"></div>
+  <h3 style="margin-top:22px">The scorecard</h3>
+  <p>The first column is filled. Every later level is judged on the same questions.</p>
+  <div id="score"></div>
+  <div class="box mission"><span class="tag">Next: Level 2, give each person their own sign-in</span>
+  Yuki needs names, and Ben must not see AC-0417. So each person must prove who they are, with proof that Atlas checks
+  itself instead of a name the caller types. You will give Atlas its own sign-in and watch Claude get a pass that says
+  "this is Anika".</div>
+  `,
+  ready: true,
+  enter() {
+    focusNode(null);
+    GAME.chips("#chips"); GAME.scorecard("#score", 1);
+  }
+}
+];
+
+GAME.level({ level: 1, stops });
+})();
+</script>
+</body>
+</html>

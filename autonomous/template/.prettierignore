@@ -1,0 +1,17 @@
+node_modules
+coverage
+.tools/
+.local/
+**/node_modules/
+# Machine-written canonical state: JSON.stringify re-expands short arrays on
+# every write, so Prettier and the writers would fight forever.
+work/runs/
+work/messages/
+work/items/
+# Hand-edited coordination files: the queue table is never re-aligned, and the
+# owner's words in the decisions log stay exactly as written.
+work/CHECKPOINT.md
+work/DECISIONS.md
+# Archived bytes are hash-bound; never reformat them.
+work/archive/
+docs/archive/

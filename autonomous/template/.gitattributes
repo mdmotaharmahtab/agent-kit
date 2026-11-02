@@ -1,0 +1,32 @@
+# Check the autonomous kit's own files out with LF, on every platform: the install
+# record pins their bytes by hash, and archived bytes are pinned the same way.
+# The rest of the project keeps whatever line-ending rules it already has.
+AGENTS.md text eol=lf
+CLAUDE.md text eol=lf
+autonomous.config.json text eol=lf
+scripts/autonomous-config.mjs text eol=lf
+scripts/work.mjs text eol=lf
+scripts/live-state.mjs text eol=lf
+scripts/lane-guard.mjs text eol=lf
+scripts/documentation.mjs text eol=lf
+scripts/verify.mjs text eol=lf
+scripts/context-hook.mjs text eol=lf
+scripts/context-hook.sh text eol=lf
+scripts/context-hook.ps1 text eol=lf
+.claude/settings.json text eol=lf
+.claude/hooks/*.mjs text eol=lf
+.claude/agents/*.md text eol=lf
+.codex/hooks.json text eol=lf
+.cursor/rules/*.mdc text eol=lf
+work/*.md text eol=lf
+work/items/*.json text eol=lf
+work/messages/*.json text eol=lf
+docs/project/*.html text eol=lf
+
+# Archived work state is hash-bound and append-only.
+work/archive/** -text -diff
+
+# An archived document needs its own exact rule, added when it is archived:
+#   docs/archive/<path> -text -diff
+# The documentation check fails on a rule with no manifest entry, and on a
+# manifest entry with no rule.

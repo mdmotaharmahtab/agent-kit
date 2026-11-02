@@ -1,0 +1,71 @@
+{
+  "description": "Inject bounded last-known recovery state at session start and around compaction, and record a private receipt.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "^(startup|resume|clear|compact)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "root=\"$(git rev-parse --show-toplevel 2>/dev/null)\" || { printf '%s\\n' 'context hook: could not resolve the Git worktree' >&2; printf '%s\\n' '{}'; exit 0; }; exec bash \"$root/scripts/context-hook.sh\" run",
+            "commandWindows": "powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command \"$root = git rev-parse --show-toplevel 2>$null; if (-not $root) { [Console]::Error.WriteLine('context hook: could not resolve the Git worktree'); '{}'; exit 0 }; & (Join-Path $root 'scripts/context-hook.ps1') run; exit $LASTEXITCODE\"",
+            "timeout": 20,
+            "additionalContextLimit": 3500
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "^(manual|auto)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "root=\"$(git rev-parse --show-toplevel 2>/dev/null)\" || { printf '%s\\n' 'context hook: could not resolve the Git worktree' >&2; printf '%s\\n' '{}'; exit 0; }; exec bash \"$root/scripts/context-hook.sh\" run",
+            "commandWindows": "powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command \"$root = git rev-parse --show-toplevel 2>$null; if (-not $root) { [Console]::Error.WriteLine('context hook: could not resolve the Git worktree'); '{}'; exit 0 }; & (Join-Path $root 'scripts/context-hook.ps1') run; exit $LASTEXITCODE\"",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "matcher": "^(manual|auto)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "root=\"$(git rev-parse --show-toplevel 2>/dev/null)\" || { printf '%s\\n' 'context hook: could not resolve the Git worktree' >&2; printf '%s\\n' '{}'; exit 0; }; exec bash \"$root/scripts/context-hook.sh\" run",
+            "commandWindows": "powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command \"$root = git rev-parse --show-toplevel 2>$null; if (-not $root) { [Console]::Error.WriteLine('context hook: could not resolve the Git worktree'); '{}'; exit 0 }; & (Join-Path $root 'scripts/context-hook.ps1') run; exit $LASTEXITCODE\"",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "root=\"$(git rev-parse --show-toplevel 2>/dev/null)\" || { printf '%s\\n' 'context hook: could not resolve the Git worktree' >&2; printf '%s\\n' '{}'; exit 0; }; exec bash \"$root/scripts/context-hook.sh\" run",
+            "commandWindows": "powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command \"$root = git rev-parse --show-toplevel 2>$null; if (-not $root) { [Console]::Error.WriteLine('context hook: could not resolve the Git worktree'); '{}'; exit 0 }; & (Join-Path $root 'scripts/context-hook.ps1') run; exit $LASTEXITCODE\"",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "root=\"$(git rev-parse --show-toplevel 2>/dev/null)\" || { printf '%s\\n' 'context hook: could not resolve the Git worktree' >&2; printf '%s\\n' '{}'; exit 0; }; exec bash \"$root/scripts/context-hook.sh\" run",
+            "commandWindows": "powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command \"$root = git rev-parse --show-toplevel 2>$null; if (-not $root) { [Console]::Error.WriteLine('context hook: could not resolve the Git worktree'); '{}'; exit 0 }; & (Join-Path $root 'scripts/context-hook.ps1') run; exit $LASTEXITCODE\"",
+            "timeout": 20
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "schemaVersion": 1,
+  "note": "Archived documents, never deleted. Each entry pins the preserved bytes by hash; .gitattributes keeps them out of line-ending conversion with a `<archivePath> -text -diff` rule.",
+  "entries": []
+}

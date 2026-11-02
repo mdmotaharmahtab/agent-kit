@@ -1,0 +1,12 @@
+# Check every text file out with LF, on every platform. The document stamps are
+# line-ending independent, but archived bytes are pinned by hash and must not be
+# rewritten by Git.
+* text=auto eol=lf
+
+# Preserved live-state snapshots are hash-bound and append-only.
+work/archive/** -text -diff
+
+# An archived document needs its own exact rule, added when it is archived:
+#   docs/archive/<path> -text -diff
+# The documentation check fails on a rule with no manifest entry, and on a
+# manifest entry with no rule.

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="How {{PROJECT_NAME}} is put together, and why." />
+    <title>{{PROJECT_NAME}} architecture</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        line-height: 1.55;
+      }
+      body {
+        margin: 0 auto;
+        max-width: 54rem;
+        padding: 2rem 1.25rem 4rem;
+      }
+      code {
+        font-size: 0.9em;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>{{PROJECT_NAME}} architecture</h1>
+    <p>
+      Replace this page with the real architecture: the pieces, how they talk to
+      each other, the decisions that are settled, and the limits that are known.
+      Keep it honest about what is proven and what is assumed.
+    </p>
+
+    <h2>Autonomous kit control plane</h2>
+    <p>
+      Work is a validated queue of items under <code>work/items/</code>. The
+      coordinator's queue and dated log live in <code>work/CHECKPOINT.md</code>,
+      beside <code>work/AGENT_CONTEXT.md</code> and <code>work/DECISIONS.md</code>.
+      Instructions, documentation, archives, validators, and hooks belong to a
+      separate lane that the lane guard enforces. Evidence is a receipt bound to
+      an exact source snapshot.
+    </p>
+
+    <h2>Scope of this page</h2>
+    <p>
+      The sources this page is stamped against are listed in
+      <code>autonomous.config.json</code> under
+      <code>documentation.architectureScopes</code>. Add your own scopes there so
+      that changing the real system marks this page for review.
+    </p>
+  </body>
+</html>
