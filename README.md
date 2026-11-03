@@ -52,7 +52,7 @@ The daily pull runs at 10:00 in your time zone. For another time, add `-At '08:3
 it again whenever you run setup again: without it, setup goes back to 10:00. To change the time later, run setup
 with the new `-At`, then sign out and back in: the task already running keeps the old time until then.
 
-On WSL, macOS or Linux, see [OTHER-PLATFORMS.md](OTHER-PLATFORMS.md).
+On WSL, macOS or Linux (untested), see [OTHER-PLATFORMS.md](OTHER-PLATFORMS.md).
 
 ## What you get
 

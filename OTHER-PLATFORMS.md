@@ -4,6 +4,8 @@
 
 ## WSL
 
+**Untested.** These commands have not been run on a real WSL install yet.
+
 Set the kit up on Windows first (README), then use that one copy from WSL too. Link WSL's `~/.ai-instructions` to
 the Windows folder, and link these WSL files and folders to their Windows counterparts, after backing up anything
 WSL already has there: `~/.codex/AGENTS.md`, `~/.claude/CLAUDE.md`, `~/.codex/skills`, `~/.claude/skills` and, for
@@ -29,6 +31,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$(wslpath -w ~/.ai-inst
 ```
 
 ## macOS and Linux
+
+**Untested.** These commands, the Claude Code hook and the autonomous package have not been run on macOS or Linux
+yet.
 
 Install by hand. These commands overwrite `~/.codex/AGENTS.md`, `~/.claude/CLAUDE.md` and `~/.gemini/GEMINI.md`,
 so back those up first if they hold anything.

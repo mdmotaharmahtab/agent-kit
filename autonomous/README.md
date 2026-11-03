@@ -8,7 +8,7 @@ nobody remembers what it was for. The autonomous kit moves the things that
 matter out of the conversation and into files the project can check: what the
 current goal is, who owns what, what has actually been proven, and which
 documents are still true. Everything here is plain Node with no runtime
-dependencies.
+dependencies. Its tests run on Windows; on macOS and Linux it is untested.
 
 Below, `<kit>` is the folder you cloned the agent kit into, by default
 `~/.ai-instructions`; this package is `<kit>/autonomous/`.
@@ -229,7 +229,7 @@ want those fixed.
 or `scripts/context-hook.ps1` on Windows, both found from the repository root, at
 session start, around compaction, and on subagent start and stop. The hook
 returns a bounded block of recovery context and always fails open. This wiring is
-**unverified against Codex itself**: the commands are tested to run from any
+**untested in Codex itself**: the commands are tested to run from any
 folder of the repository, but the `hooks.json` format and its `commandWindows`
 field were not checked against Codex's documentation.
 
